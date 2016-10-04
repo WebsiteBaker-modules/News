@@ -4,24 +4,25 @@
  * @category        modules
  * @package         news
  * @author          WebsiteBaker Project
- * @copyright       2009-2011, Website Baker Org. e.V.
- * @link         http://www.websitebaker2.org/
+ * @copyright       WebsiteBaker Org. e.V.
+ * @link            http://websitebaker.org/
  * @license         http://www.gnu.org/licenses/gpl.html
- * @platform        WebsiteBaker 2.8.x
- * @requirements    PHP 5.2.2 and higher
+ * @platform        WebsiteBaker 2.8.3
+ * @requirements    PHP 5.3.6 and higher
  * @version         $Id: modify_group.php 1538 2011-12-10 15:06:15Z Luisehahne $
  * @filesource      $HeadURL: svn://isteam.dynxs.de/wb_svn/wb280/tags/2.8.3/wb/modules/news/modify_group.php $
  * @lastmodified    $Date: 2011-12-10 16:06:15 +0100 (Sa, 10. Dez 2011) $
  *
  */
 
-require('../../config.php');
+if ( !defined( 'WB_PATH' ) ){ require( dirname(dirname((__DIR__))).'/config.php' ); }
 
-// $admin_header = true;
+// suppress to print the header, so no new FTAN will be set
+//$admin_header = false;
 // Tells script to update when this page was last updated
 $update_when_modified = false;
 // show the info banner
-//$print_info_banner = true;
+$print_info_banner = true;
 // Include WB admin wrapper script
 require(WB_PATH.'/modules/admin.php');
 /* */
@@ -31,8 +32,11 @@ if (!$group_id) {
 }
 
 // Get header and footer
-$query_content = $database->query("SELECT * FROM ".TABLE_PREFIX."mod_news_groups WHERE group_id = '$group_id'");
-$fetch_content = $query_content->fetchRow();
+$sql  = 'SELECT * FROM '.TABLE_PREFIX.'mod_news_groups '
+      . 'WHERE group_id = '.$group_id;
+$query_content = $database->query( $sql );
+
+$fetch_content = $query_content->fetchRow( MYSQLI_ASSOC );
 
 ?>
 

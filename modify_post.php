@@ -15,7 +15,7 @@
  *
  */
 
-require('../../config.php');
+if ( !defined( 'WB_PATH' ) ){ require( dirname(dirname((__DIR__))).'/config.php' ); }
 
 // $admin_header = true;
 // Tells script to update when this page was last updated
@@ -32,9 +32,9 @@ if (!$post_id) {
 }
 
 // Get header and footer
-$sql = 'SELECT * FROM `'.TABLE_PREFIX.'mod_news_posts` '
-.'WHERE `post_id` = '.$post_id.' '
-.'ORDER BY `position` ASC';
+$sql  = 'SELECT * FROM `'.TABLE_PREFIX.'mod_news_posts` '
+      . 'WHERE `post_id` = '.$post_id.' '
+      . 'ORDER BY `position` ASC';
 $query_content = $database->query($sql);
 $fetch_content = $query_content->fetchRow(MYSQLI_ASSOC);
 
@@ -52,15 +52,14 @@ $jscal_use_time = true; // whether to use a clock, too
 require_once(WB_PATH."/include/jscalendar/wb-setup.php");
 ?>
 <h2><?php echo $TEXT['ADD'].'/'.$TEXT['MODIFY'].' '.$TEXT['POST']; ?></h2>
-<div class="jsadmin jcalendar hide"></div> 
+<div class="jsadmin jcalendar hide"></div>
 <form name="modify" action="<?php echo WB_URL; ?>/modules/news/save_post.php" method="post" style="margin: 0;">
 <?php echo $admin->getFTAN(); ?>
 <input type="hidden" name="section_id" value="<?php echo $section_id; ?>" />
 <input type="hidden" name="page_id" value="<?php echo $page_id; ?>" />
 <input type="hidden" name="post_id" value="<?php echo $post_id; ?>" />
-<input type="hidden" name="link" value="<?php echo $fetch_content['link']; ?>" />
 
-<table class="row_a">
+<table class="row_a news">
 <tr>
    <td><?php echo $TEXT['TITLE']; ?>:</td>
    <td width="80%">
@@ -116,7 +115,14 @@ require_once(WB_PATH."/include/jscalendar/wb-setup.php");
 <tr>
    <td><?php echo $TEXT['PUBL_START_DATE']; ?>:</td>
    <td>
-   <input type="text" id="publishdate" name="publishdate" value="<?php if($fetch_content['published_when']==0) print date($jscal_format, strtotime((date('Y-m-d H:i')))); else print date($jscal_format, $fetch_content['published_when']);?>" style="width: 120px;" />
+<?php
+if ($fetch_content['published_when']==0) {
+    $iPublishedWhen = date($jscal_format, strtotime((date('Y-m-d H:i')))+TIMEZONE);
+} else {
+    $iPublishedWhen = date($jscal_format, $fetch_content['published_when']+TIMEZONE);
+}
+?>
+   <input type="text" id="publishdate" name="publishdate" value="<?php echo $iPublishedWhen;?>" style="width: 120px;" />
    <img src="<?php echo THEME_URL ?>/images/clock_16.png" id="publishdate_trigger" style="cursor: pointer;" title="<?php echo $TEXT['CALENDAR']; ?>" alt="<?php echo $TEXT['CALENDAR']; ?>" onmouseover="this.style.background='lightgrey';" onmouseout="this.style.background=''" />
    <img src="<?php echo THEME_URL ?>/images/clock_del_16.png" style="cursor: pointer;" title="<?php echo $TEXT['DELETE_DATE']; ?>" alt="<?php echo $TEXT['DELETE_DATE']; ?>" onmouseover="this.style.background='lightgrey';" onmouseout="this.style.background=''" onclick="document.modify.publishdate.value=''" />
    </td>
@@ -124,21 +130,36 @@ require_once(WB_PATH."/include/jscalendar/wb-setup.php");
 <tr>
    <td><?php echo $TEXT['PUBL_END_DATE']; ?>:</td>
    <td>
-   <input type="text" id="enddate" name="enddate" value="<?php if($fetch_content['published_until']==0) print ""; else print date($jscal_format, $fetch_content['published_until'])?>" style="width: 120px;" />
+<?php
+if ($fetch_content['published_until']==0) {
+    $iPublishedUntil = '';
+} else {
+    $iPublishedUntil = date($jscal_format, $fetch_content['published_until']+TIMEZONE);
+}
+?>
+   <input type="text" id="enddate" name="enddate" value="" style="width: 120px;" />
    <img src="<?php echo THEME_URL ?>/images/clock_16.png" id="enddate_trigger" style="cursor: pointer;" title="<?php echo $TEXT['CALENDAR']; ?>" alt="<?php echo $TEXT['CALENDAR']; ?>" onmouseover="this.style.background='lightgrey';" onmouseout="this.style.background=''" />
    <img src="<?php echo THEME_URL ?>/images/clock_del_16.png" style="cursor: pointer;" title="<?php echo $TEXT['DELETE_DATE']; ?>" alt="<?php echo $TEXT['DELETE_DATE']; ?>" onmouseover="this.style.background='lightgrey';" onmouseout="this.style.background=''" onclick="document.modify.enddate.value=''" />
    </td>
 </tr>
 </table>
 
-<table class="row_a" cellpadding="2" cellspacing="0" border="0" width="100%">
+<table class="row_a news">
 <tr>
    <td valign="top"><?php echo $TEXT['SHORT']; ?>:</td>
 </tr>
 <tr>
    <td>
-   <?php
-   show_wysiwyg_editor("short","short",htmlspecialchars($fetch_content['content_short']),"100%","200px");
+<?php
+      $contentShort = $fetch_content['content_short'];
+      $contentLong = $fetch_content['content_long'];
+      $sFilterApi = WB_PATH.'/modules/output_filter/OutputFilterApi.php';
+      if (is_readable($sFilterApi)) {
+          require_once($sFilterApi);
+          $contentShort = OutputFilterApi('ReplaceSysvar', $contentShort);
+          $contentLong  = OutputFilterApi('ReplaceSysvar', $contentLong);
+      }
+      show_wysiwyg_editor("short","short",htmlspecialchars($contentShort),"100%","200px");
    ?>
    </td>
 </tr>
@@ -147,14 +168,14 @@ require_once(WB_PATH."/include/jscalendar/wb-setup.php");
 </tr>
 <tr>
    <td>
-   <?php
-   show_wysiwyg_editor("long","long",htmlspecialchars($fetch_content['content_long']),"100%","650px");
-   ?>
+<?php
+      show_wysiwyg_editor("long","long",htmlspecialchars($contentLong),"100%","650px");
+?>
    </td>
 </tr>
 </table>
 
-<table>
+<table class="news">
 <tr>
    <td align="left">
       <input name="save" type="submit" value="<?php echo $TEXT['SAVE']; ?>" style="width: 100px; margin-top: 5px;" />
@@ -215,8 +236,8 @@ if($query_comments->numRows() > 0) {
    $row = 'a';
    $pid = $admin->getIDKEY($post_id);
    ?>
-   <table cellpadding="2" cellspacing="0" border="0" width="100%">
-   <?php
+   <table class="news">
+<?php
    while($comment = $query_comments->fetchRow()) {
       $cid = $admin->getIDKEY($comment['comment_id']);
       ?>
@@ -226,7 +247,7 @@ if($query_comments->numRows() > 0) {
                echo $section_id; ?>&amp;comment_id=<?php echo $cid; ?>" title="<?php echo $TEXT['MODIFY']; ?>">
                <img src="<?php echo THEME_URL; ?>/images/modify_16.png" border="0" alt="^" />
             </a>
-         </td>   
+         </td>
          <td>
             <a href="<?php echo WB_URL; ?>/modules/news/modify_comment.php?page_id=<?php echo $page_id; ?>&amp;section_id=<?php
                echo $section_id; ?>&amp;comment_id=<?php echo $cid; ?>">

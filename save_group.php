@@ -15,7 +15,7 @@
  *
  */
 
-require('../../config.php');
+if ( !defined( 'WB_PATH' ) ){ require( dirname(dirname((__DIR__))).'/config.php' ); }
 
 // Get id
 //if(!isset($_POST['group_id']) || !is_numeric($_POST['group_id']))
@@ -55,13 +55,16 @@ if($admin->get_post('title') == '')
 }
 else
 {
-   $title = $admin->get_post_escaped('title');
-   $active = $admin->get_post_escaped('active');
+   $title = $admin->StripCodeFromText($admin->get_post('title'));
+   $active = intval($admin->get_post('active'));
 }
 
 // Update row
-
-$database->query("UPDATE ".TABLE_PREFIX."mod_news_groups SET title = '$title', active = '$active' WHERE group_id = '$group_id'");
+$sql  = 'UPDATE `'.TABLE_PREFIX.'mod_news_groups` SET '
+      . '`title`=\''.$database->escapeString($title).'\', '
+      . '`active`=\''.$database->escapeString($active).'\' '
+      . 'WHERE `group_id`='.$database->escapeString($group_id);
+$database->query($sql);
 
 // Check if the user uploaded an image or wants to delete one
 if(isset($_FILES['image']['tmp_name']) AND $_FILES['image']['tmp_name'] != '') {
@@ -79,7 +82,7 @@ if(isset($_FILES['image']['tmp_name']) AND $_FILES['image']['tmp_name'] != '') {
       case 'image/x-png' :
       break;
       default:
-         $admin->print_error($MESSAGE['GENERIC']['FILE_TYPE'].' JPG (JPEG) or PNG',ADMIN_URL.'/pages/modify.php?page_id='.$page_id);
+         $admin->print_error($MESSAGE['GENERIC_FILE_TYPE'].' JPG (JPEG) or PNG',ADMIN_URL.'/pages/modify.php?page_id='.$page_id);
       break;
    endswitch;
 

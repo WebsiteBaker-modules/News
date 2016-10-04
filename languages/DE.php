@@ -28,7 +28,7 @@ $MOD_NEWS['TEXT_POSTED_BY'] = 'Ver&ouml;ffentlicht von';
 $MOD_NEWS['TEXT_ON'] = 'am';
 $MOD_NEWS['TEXT_LAST_CHANGED'] = 'Zuletzt ge&auml;ndert am';
 $MOD_NEWS['TEXT_AT'] = 'um';
-$MOD_NEWS['TEXT_BACK'] = 'Zur&uuml;ck';
+$MOD_NEWS['TEXT_BACK'] = 'Zur&uuml;ck zur Übersicht';
 $MOD_NEWS['TEXT_COMMENTS'] = 'Kommentare';
 $MOD_NEWS['TEXT_COMMENT'] = 'Kommentar';
 $MOD_NEWS['TEXT_ADD_COMMENT'] = 'Kommentar hinzuf&uuml;gen';
@@ -37,5 +37,3 @@ $MOD_NEWS['PAGE_NOT_FOUND'] = 'Seite nicht gefunden';
 $MOD_NEWS['NO_COMMENT_FOUND'] = 'Kein Kommentar gefunden';
 
 $TEXT['UNKNOWN'] = 'Gast';
-
-?>

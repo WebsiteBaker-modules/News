@@ -15,7 +15,7 @@
  *
  */
 
-require('../../config.php');
+if ( !defined( 'WB_PATH' ) ){ require( dirname(dirname((__DIR__))).'/config.php' ); }
 
 // Include WB admin wrapper script
 require(WB_PATH.'/modules/admin.php');
@@ -26,10 +26,12 @@ if (!$comment_id) {
 }
 
 // Get header and footer
-$query_content = $database->query("SELECT post_id,title,comment FROM ".TABLE_PREFIX."mod_news_comments WHERE comment_id = '$comment_id'");
-$fetch_content = $query_content->fetchRow();
+$sql  = 'SELECT `post_id`,`title`,`comment` FROM `'.TABLE_PREFIX.'mod_news_comments` '
+      . 'WHERE `comment_id` = \''.$comment_id.'\'';
+$query_content = $database->query($sql);
+$fetch_content = $query_content->fetchRow(MYSQLI_ASSOC);
 ?>
-
+<div id="news-wrapper">
 <h2><?php echo $TEXT['MODIFY'].' '.$TEXT['COMMENT']; ?></h2>
 
 <form name="modify" action="<?php echo WB_URL; ?>/modules/news/save_comment.php" method="post" style="margin: 0;">
@@ -68,6 +70,7 @@ $fetch_content = $query_content->fetchRow();
 </tr>
 </table>
 </form>
+</div>
 
 <?php
 

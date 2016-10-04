@@ -12,17 +12,20 @@
  * @version         $Id: view.php 1538 2011-12-10 15:06:15Z Luisehahne $
  * @filesource      $HeadURL: svn://isteam.dynxs.de/wb_svn/wb280/tags/2.8.3/wb/modules/news/view.php $
  * @lastmodified    $Date: 2011-12-10 16:06:15 +0100 (Sa, 10. Dez 2011) $
- *
+ *  if ( $setting_posts_per_page && $setting_posts_per_page + $position <= $i ) { break; }
  */
 
-// Must include code to stop this file being access directly
 /* -------------------------------------------------------- */
-if (! defined('WB_PATH')) { die('Cannot access this file directly'); }
+// Must include code to stop this file being accessed directly
+if(defined('WB_PATH') == false) { die('Illegale file access /'.basename(__DIR__).'/'.basename(__FILE__).''); }
 /* -------------------------------------------------------- */
 global $post_id, $post_section, $TEXT, $MESSAGE, $MOD_NEWS;
 // load module language file
-$lang = (dirname(__FILE__)) . '/languages/' . LANGUAGE . '.php';
-require_once(!file_exists($lang) ? (dirname(__FILE__)) . '/languages/EN.php' : $lang );
+$sAddonName = basename(__DIR__);
+require(WB_PATH .'/modules/'.$sAddonName.'/languages/EN.php');
+if(file_exists(WB_PATH .'/modules/'.$sAddonName.'/languages/'.LANGUAGE .'.php')) {
+    require(WB_PATH .'/modules/'.$sAddonName.'/languages/'.LANGUAGE .'.php');
+}
 //overwrite php.ini on Apache servers for valid SESSION ID Separator
 if (function_exists('ini_set')) {
     ini_set('arg_separator.output', '&amp;');
@@ -34,14 +37,17 @@ $addBracket = function ()
 //    return preg_replace('/^(.*)$/', '/\[$1\]/s', $aList);
     return preg_replace('/^(.*)$/', '[$1]', $aList);
 };
+$modRel = str_replace(WB_PATH, '', __DIR__).'/';
+$ModuleRel = '/modules/'.basename(__DIR__).'/';
+$ModuleUrl = WB_URL.'/modules/'.basename(__DIR__).'/';
+$ModulePath = WB_PATH.'/modules/'.basename(__DIR__).'/';
+$sRecallAddress = WB_URL.PAGES_DIRECTORY.$GLOBALS['wb']->page['link'].PAGE_EXTENSION;
 
-// Check if there is a start point defined
-$position = (isset($_GET['p']) ? intval($_GET['p']) : 0);
 // Get user's username, display name, email, and id - needed for insertion into post info
 $users = array();
 $sql = 'SELECT `user_id`,`username`,`display_name`,`email` FROM `'.TABLE_PREFIX.'users`';
 if (($resUsers = $database->query($sql))) {
-    while ($recUser = $resUsers->fetchRow()) {
+    while ($recUser = $resUsers->fetchRow( MYSQLI_ASSOC )) {
         $users[$recUser['user_id']] = $recUser;
     }
 }
@@ -54,20 +60,19 @@ $groups = array(
         'image'     => ''
     )
 );
+
+
 $sql = 'SELECT `group_id`, `title`, `active` FROM `'.TABLE_PREFIX.'mod_news_groups` '
      . 'WHERE `section_id`='.(int)$section_id.' '
      . 'ORDER BY `position` ASC';
 if (($query_users = $database->query($sql))) {
-    while (($group = $query_users->fetchRow())) {
+    while (($group = $query_users->fetchRow( MYSQLI_ASSOC ))) {
         // Insert user info into users array
         $groups[$group['group_id']] = $group;
         $sImageUrl = MEDIA_DIRECTORY.'/.news/image'.$group['group_id'].'.jpg';
         $groups[$group['group_id']]['image'] = (is_readable(WB_PATH.$sImageUrl) ? WB_URL.$sImageUrl : '');
     }
 }
-// Check if we should show the main page or a post itself
-// if(!defined('POST_ID') OR !is_numeric(POST_ID))
-if (!isset($post_id) || !is_numeric($post_id)) {
     // Check if we should only list posts from a certain group
     if (isset($_GET['g']) AND is_numeric($_GET['g'])) {
         $query_extra = 'AND `group_id`='.(int)$_GET['g'].' ';
@@ -87,34 +92,54 @@ if (!isset($post_id) || !is_numeric($post_id)) {
         }
     }
     // Get total number of posts relatet to now
-    $t = time();
+// Check if we should show the main page or a post itself
+    $now = $t = time();
     $sql = 'SELECT COUNT(*) FROM `'.TABLE_PREFIX.'mod_news_posts` '
          . 'WHERE `section_id`='.(int)$section_id.' AND `active`=1 '
          .        'AND `title`!=\'\' '
-         .        'AND (`published_when`=0 OR `published_when`<='.$t.') '
-         .        'AND (`published_until`=0 OR `published_until`>='.$t.') '
+         .        'AND (`published_when`=0 OR `published_when`<='.$now.') '
+         .        'AND (`published_until`=0 OR `published_until`>='.$now.') '
          .        $query_extra;
     $total_num = intval($database->get_one($sql));
-    // Work-out if we need to add limit code to sql
-    if ($setting_posts_per_page != 0) {
+    if ( $total_num && $setting_posts_per_page ) {
+        $iNumberOfPages = (int)($total_num / $setting_posts_per_page)+($total_num % $setting_posts_per_page ? 1:0 );
+        $position  = intval( isset($_GET['p'] ) ? $_GET['p'] : 0 );
+        $position  = abs( ( $position < $total_num) ? $position : ($iNumberOfPages*$setting_posts_per_page) );
+        // Work-out if we need to add limit code to sql
         $limit_sql = ' LIMIT '.$position.', '.$setting_posts_per_page;
     } else {
+        $display_previous_next_links = '';
+        $position = 0;
+        $next_link = '';
+        $next_page_link = '';
+        $previous_link = '';
+        $previous_page_link = '';
+        $out_of = '';
+        $of = '';
         $limit_sql = '';
     }
+
+// if(!defined('POST_ID') OR !is_numeric(POST_ID))
+if (!isset($post_id) || !is_numeric($post_id)) {
+/*
+$setting_posts_per_page = 12/5 = 2 5 = 10
+*/
     // Query posts (for this page)
     $sql = 'SELECT * FROM `'.TABLE_PREFIX.'mod_news_posts` '
          . 'WHERE `section_id`='.$section_id.' '
          .        'AND `active`=1 '
          .        'AND `title`!=\'\' '
-         .        'AND (`published_when`=0 OR `published_when`<='.$t.') '
-         .        'AND (`published_until`=0 OR `published_until`>='.$t.') '
+         .        'AND (`published_when`=0 OR `published_when`<='.$now.') '
+         .        'AND (`published_until`=0 OR `published_until`>='.$now.') '
          .        $query_extra
          . 'ORDER BY `position` DESC'.$limit_sql;
-    $query_posts = $database->query($sql);         
-    $num_posts = $query_posts->numRows();
+    $query_posts = $database->query($sql);
+//    $total_num = $query_posts->numRows();
     // Create previous and next links
+
     if ($setting_posts_per_page != 0) {
-        if ($position > 0) {
+        $spaces = str_repeat('&#160;', 25);
+        if ( ($position > 0) && ($position < $total_num) ) {
             if (isset($_GET['g']) AND is_numeric($_GET['g'])) {
                 $pl_prepend = '<a href="?p='.($position-$setting_posts_per_page).'&amp;g='.$_GET['g'].'">&lt;&lt; ';
             } else {
@@ -124,12 +149,13 @@ if (!isset($post_id) || !is_numeric($post_id)) {
             $previous_link = $pl_prepend.$TEXT['PREVIOUS'].$pl_append;
             $previous_page_link = $pl_prepend.$TEXT['PREVIOUS_PAGE'].$pl_append;
         } else {
-            $previous_link = '';
-            $previous_page_link = '';
+            $previous_link = $spaces;
+            $previous_page_link = $spaces;
         }
+
         if ($position + $setting_posts_per_page >= $total_num) {
-            $next_link = '';
-            $next_page_link = '';
+            $next_link = $spaces;
+            $next_page_link = $spaces;
         } else {
             if (isset($_GET['g']) AND is_numeric($_GET['g'])) {
                 $nl_prepend = '<a href="?p='.($position+$setting_posts_per_page).'&amp;g='.$_GET['g'].'"> ';
@@ -140,23 +166,26 @@ if (!isset($post_id) || !is_numeric($post_id)) {
             $next_link = $nl_prepend.$TEXT['NEXT'].$nl_append;
             $next_page_link = $nl_prepend.$TEXT['NEXT_PAGE'].$nl_append;
         }
-        if ($position+$setting_posts_per_page > $total_num) {
-            $num_of = $position+$num_posts;
+        if ($position+$setting_posts_per_page > $total_num) {  //
+            $num_of = $total_num;
         } else {
             $num_of = $position+$setting_posts_per_page;
         }
-        $out_of = ($position+1).'-'.$num_of.' '.strtolower($TEXT['OUT_OF']).' '.$total_num;
-        $of = ($position+1).'-'.$num_of.' '.strtolower($TEXT['OF']).' '.$total_num;
-        $display_previous_next_links = '';
-    } else {
-        $display_previous_next_links = 'none';
+        if ( ($position >= 0) && ($position < $total_num) ) {
+            $out_of = ($position+1).'-'.$num_of.' '.strtolower($TEXT['OUT_OF']).' '.$total_num;
+            $of = ($position+1).'-'.$num_of.' '.strtolower($TEXT['OF']).' '.$total_num;
+            $display_previous_next_links = $spaces;
+        } else {
+            $display_previous_next_links = 'none';
+        }
     }
-    if ($num_posts === 0) {
+    if ($total_num=== 0) { // $num_posts
         $setting_header = '';
         $setting_post_loop = '';
         $setting_footer = '';
         $setting_posts_per_page = '';
     }
+
 // Print header
     $aPlaceHolders = $addBracket(
         'DISPLAY_PREVIOUS_NEXT_LINKS',
@@ -183,7 +212,7 @@ if (!isset($post_id) || !is_numeric($post_id)) {
         );
     }
     print (str_replace($aPlaceHolders, $aReplacements, $setting_header));
-    if ($num_posts > 0)
+    if ($total_num > 0) // $num_posts
     {
         if ($query_extra != '') {
             echo ('<div class="selected-group-title">'
@@ -192,6 +221,8 @@ if (!isset($post_id) || !is_numeric($post_id)) {
                  .'</div>'.PHP_EOL
             );
         }
+/*
+*/
         $aPlaceHolders = $addBracket(
             'PAGE_TITLE',
             'GROUP_ID',
@@ -215,8 +246,10 @@ if (!isset($post_id) || !is_numeric($post_id)) {
             'DISPLAY_NAME',
             'EMAIL'
         );
-        while (($post = $query_posts->fetchRow()))
+        $i=0;
+        while (($post = $query_posts->fetchRow( MYSQLI_ASSOC )))
         {
+            ++$i;
             if (
                 isset($groups[$post['group_id']]['active']) AND
                 $groups[$post['group_id']]['active'] != false
@@ -233,13 +266,13 @@ if (!isset($post_id) || !is_numeric($post_id)) {
                     $post_date = date(DATE_FORMAT, $post['posted_when']+TIMEZONE);
                     $post_time = date(TIME_FORMAT, $post['posted_when']+TIMEZONE);
                 }
-                $publ_date      = date(DATE_FORMAT,$post['published_when']);
-                $publ_time      = date(TIME_FORMAT,$post['published_when']);
+                $publ_date      = date(DATE_FORMAT,$post['published_when']+TIMEZONE);
+                $publ_time      = date(TIME_FORMAT,$post['published_when']+TIMEZONE);
                 // Work-out the post link
                 $post_link      = page_link($post['link']);
                 $post_link_path = str_replace(WB_URL, WB_PATH,$post_link);
-                $create_date    = date(DATE_FORMAT, $post['created_when']);
-                $create_time    = date(TIME_FORMAT, $post['created_when']);
+                $create_date    = date(DATE_FORMAT, $post['created_when']+TIMEZONE);
+                $create_time    = date(TIME_FORMAT, $post['created_when']+TIMEZONE);
                 if (isset($_GET['p']) AND $position > 0) {
                     $post_link .= '?p='.$position;
                 }
@@ -262,9 +295,15 @@ if (!isset($post_id) || !is_numeric($post_id)) {
                     $group_image= "<img src='".$group_image."' alt='".$group_title."' />";
                 }
                 // Replace [wblink--PAGE_ID--] with real link
+                $sMediaUrl = WB_URL.MEDIA_DIRECTORY;
                 $short = ($post['content_short']);
+                $short = (str_replace('{SYSVAR:MEDIA_REL}', $sMediaUrl, $short));
                 // Replace vars with values
-                $post_long_len = strlen($post['content_long']);
+//                $post_long_len = mb_strlen($post['content_long']);
+//                $bIsEmptyLongContent = (bool)( $post_long_len == 0);
+                $bIsEmptyLongContent = !(bool)mb_strlen(
+                    trim(preg_replace('/^\s*?<(p|div)>(.*)?<\/\s*?\1>$/si', '\2', $post['content_long']))
+                );
                 // set replacements for exchange
                 $aReplacements = array(
                     PAGE_TITLE,
@@ -282,8 +321,9 @@ if (!isset($post_id) || !is_numeric($post_id)) {
                     $publ_date,
                     $publ_time
                 );
-                if (isset($users[$uid]['username']) AND $users[$uid]['username'] != '') {
-                    if ($post_long_len < 9) {
+                if (isset($users[$uid]['username']) && $users[$uid]['username'] != '')
+                {
+                    if ($bIsEmptyLongContent) {
                         $aReplacements[] = '#" onclick="javascript:void(0);return false;" style="cursor:no-drop;';
                         $aReplacements[] = 'hidden';
                         $aReplacements[] = '';
@@ -301,7 +341,7 @@ if (!isset($post_id) || !is_numeric($post_id)) {
                         $aReplacements[] = $users[$uid]['email'];
                     }
                 } else {
-                    if ($post_long_len < 9) {
+                    if ($bIsEmptyLongContent) {
                         $aReplacements[] = '#" onclick="javascript:void(0);return false;" style="cursor:no-drop;';
                         $aReplacements[] = 'hidden';
                     } else {
@@ -312,7 +352,9 @@ if (!isset($post_id) || !is_numeric($post_id)) {
                 }
                 print (str_replace($aPlaceHolders, $aReplacements, $setting_post_loop));
             }
-        }
+//            if ( $setting_posts_per_page == $i ) { break; }
+            if ( $setting_posts_per_page && $setting_posts_per_page + $position <= $i ) { break; }
+        } // end while posts
     }
     // Print footer
     $aPlaceHolders = $addBracket(
@@ -350,7 +392,7 @@ if (!isset($post_id) || !is_numeric($post_id)) {
              . 'FROM `'.TABLE_PREFIX.'mod_news_settings` '
              . 'WHERE `section_id`='.(int)$section_id;
         if (($resSettings = $database->query($sql)) ) {
-            if (($recSettings = $resSettings->fetchRow())) {
+            if (($recSettings = $resSettings->fetchRow( MYSQLI_ASSOC ))) {
                 foreach ($recSettings as $key=>$val) {
                     ${'setting_'.$key} = $val;
                 }
@@ -361,7 +403,7 @@ if (!isset($post_id) || !is_numeric($post_id)) {
              . 'WHERE `page_id`='.PAGE_ID;
         $query_page = $database->query($sql);
         if ($query_page->numRows() > 0) {
-            $page = $query_page->fetchRow();
+            $page = $query_page->fetchRow( MYSQLI_ASSOC );
             $page_link = page_link($page['link']);
             if (isset($_GET['p']) AND $position > 0) {
                 $page_link .= '?p='.$_GET['p'];
@@ -375,7 +417,7 @@ if (!isset($post_id) || !is_numeric($post_id)) {
                 $page_link .= 'g='.$_GET['g'];
             }
         } else {
-            exit($MESSAGE['PAGES']['NOT_FOUND']);
+            exit($MESSAGE['PAGES_NOT_FOUND']);
         }
         // Get post info
         $t = time();
@@ -384,8 +426,8 @@ if (!isset($post_id) || !is_numeric($post_id)) {
              .        'AND (`published_when`=0 OR `published_when`<='.$t.') '
              .        'AND (`published_until`=0 OR `published_until`>='.$t.')';
         $query_post = $database->query($sql);
-        if ($post = $query_post->fetchRow()) {
-            if (isset($groups[$post['group_id']]['active']) 
+        if ($post = $query_post->fetchRow( MYSQLI_ASSOC )) {
+            if (isset($groups[$post['group_id']]['active'])
                 AND $groups[$post['group_id']]['active'] != false
             ) { // Make sure parent group is active
                 $uid = $post['posted_by']; // User who last modified the post
@@ -400,20 +442,22 @@ if (!isset($post_id) || !is_numeric($post_id)) {
                     $post_date = date(DATE_FORMAT, $post['posted_when']+TIMEZONE);
                     $post_time = date(TIME_FORMAT, $post['posted_when']+TIMEZONE);
                 }
-                $publ_date      = date(DATE_FORMAT,$post['published_when']);
-                $publ_time      = date(TIME_FORMAT,$post['published_when']);
+                $publ_date      = date(DATE_FORMAT,$post['published_when']+TIMEZONE);
+                $publ_time      = date(TIME_FORMAT,$post['published_when']+TIMEZONE);
                 // Work-out the post link
                 $post_link      = page_link($post['link']);
                 $post_link_path = str_replace(WB_URL, WB_PATH,$post_link);
-                $create_date    = date(DATE_FORMAT, $post['created_when']);
-                $create_time    = date(TIME_FORMAT, $post['created_when']);
+                $create_date    = date(DATE_FORMAT, $post['created_when']+TIMEZONE);
+                $create_time    = date(TIME_FORMAT, $post['created_when']+TIMEZONE);
                 // Get group id, title, and image
                 $group_id       = $post['group_id'];
                 $group_title    = $groups[$group_id]['title'];
                 $group_image    = $groups[$group_id]['image'];
                 $display_image  = ($group_image == '') ? "none" : "inherit";
                 $display_group  = ($group_id == 0) ? 'none' : 'inherit';
-                $post_short     =$post['content_short'];
+                $sMediaUrl = WB_URL.MEDIA_DIRECTORY;
+                $post_short = ($post['content_short']);
+                $post_short = (str_replace('{SYSVAR:MEDIA_REL}', $sMediaUrl, $post_short));
                 if ($group_image != "") $group_image= "<img src='".$group_image."' alt='".$group_title."' />";
 
                 $aPlaceHolders = $addBracket(
@@ -470,13 +514,32 @@ if (!isset($post_id) || !is_numeric($post_id)) {
                     $aReplacements[] = $users[$uid]['display_name'];
                     $aReplacements[] = $users[$uid]['email'];
                 }
+                $sMediaUrl = WB_URL.MEDIA_DIRECTORY;
                 $post_long = ($post['content_long'] != '') ? $post['content_long'] : $post['content_short'];
+                $post_long = (str_replace('{SYSVAR:MEDIA_REL}', $sMediaUrl, $post_long));
                 print (str_replace($aPlaceHolders, $aReplacements, $setting_post_header));
                 print $post_long;
                 print (str_replace($aPlaceHolders, $aReplacements, $setting_post_footer));
             }
         } else {
-                $wb->print_error($MESSAGE['FRONTEND_SORRY_NO_ACTIVE_SECTIONS'], 'view.php', false);
+                $aPlaceHolders = $addBracket(
+                    'BACK',
+                    'TEXT_BACK',
+                    'TEXT_LAST_CHANGED',
+                    'TEXT_AT',
+                    'MODI_DATE',
+                    'MODI_TIME'
+                );
+                $aReplacements = array(
+                    $page_link,
+                    $MOD_NEWS['TEXT_BACK'],
+                    $MESSAGE['FRONTEND_SORRY_NO_ACTIVE_SECTIONS'],
+                    '',
+                    ''
+                );
+                print (str_replace($aPlaceHolders, $aReplacements, $setting_post_footer));
+
+//                $wb->print_error($MESSAGE['FRONTEND_SORRY_NO_ACTIVE_SECTIONS'], $sRecallAddress, false);
         }
         // Show comments section if we have to
         if (($post['commenting'] == 'private' AND isset($wb) AND $wb->is_authenticated() == true)
@@ -511,8 +574,9 @@ if (!isset($post_id) || !is_numeric($post_id)) {
                  . 'FROM `'.TABLE_PREFIX.'mod_news_comments` '
                  . 'WHERE `post_id`='.$post_id.' '
                  . 'ORDER BY `commented_when` ASC';
+
             if (($query_comments = $database->query($sql))) {
-                while (($comment = $query_comments->fetchRow())) {
+                while (($comment = $query_comments->fetchRow( MYSQLI_ASSOC ))) {
                     $iNumberOfComments++;
                     // Display Comments without slashes, but with new-line characters
                     $comment['comment'] = nl2br($wb->strip_slashes($comment['comment']));
@@ -558,7 +622,7 @@ if (!isset($post_id) || !is_numeric($post_id)) {
                 'TEXT_COMMENTS'
             );
             $aReplacements = array(
-                WB_URL.'/modules/news/comment.php?post_id='.$post_id.'&amp;section_id='.$section_id,
+                WB_URL.'/modules/news/comment.php?post_id='.$post_id.'&amp;section_id='.$section_id.'&amp;p='.$position,
                 $MOD_NEWS['TEXT_ADD_COMMENT'],
                 $MOD_NEWS['TEXT_COMMENTS']
             );

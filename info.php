@@ -17,13 +17,13 @@
 
 /* -------------------------------------------------------- */
 // Must include code to stop this file being accessed directly
-if(defined('WB_PATH') == false) { die("Cannot access this file directly"); }
+if(defined('WB_PATH') == false) { die('Illegale file access /'.basename(__DIR__).'/'.basename(__FILE__).''); }
 /* -------------------------------------------------------- */
 
 $module_directory   = 'news';
-$module_name        = 'News';
+$module_name        = 'News v3.6.4';
 $module_function    = 'page';
-$module_version     = '3.5.8';
+$module_version     = '3.6.4';
 $module_platform    = '2.8.3';
 $module_author      = 'Ryan Djurovich, Rob Smith, Werner v.d.Decken';
 $module_license     = 'GNU General Public License';

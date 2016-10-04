@@ -15,7 +15,7 @@
  *
  */
 
-require('../../config.php');
+if ( !defined( 'WB_PATH' ) ){ require( dirname(dirname((__DIR__))).'/config.php' ); }
 
 $admin_header = true;
 // Tells script to update when this page was last updated
@@ -32,7 +32,9 @@ if (!$post_id || !$comment_id) {
 }
 
 // Update row
-$database->query("DELETE FROM ".TABLE_PREFIX."mod_news_comments  WHERE comment_id = '$comment_id'");
+    $sql  = 'DELETE FROM `'.TABLE_PREFIX.'mod_news_comments` '
+          . 'WHERE `comment_id` = '.$database->escapeString($comment_id);
+    $database->query($sql);
 
 // Check if there is a db error, otherwise say successful
 if($database->is_error())

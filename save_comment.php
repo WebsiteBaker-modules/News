@@ -4,21 +4,25 @@
  * @category        modules
  * @package         news
  * @author          WebsiteBaker Project
- * @copyright       2009-2011, Website Baker Org. e.V.
- * @link            http://www.websitebaker2.org/
+ * @copyright       Website Baker Org. e.V.
+ * @link            http://websitebaker.org/
  * @license         http://www.gnu.org/licenses/gpl.html
- * @platform        WebsiteBaker 2.8.x
- * @requirements    PHP 5.2.2 and higher
+ * @platform        WebsiteBaker 2.8.3
+ * @requirements    PHP 5.3.6 and higher
  * @version         $Id: save_comment.php 1538 2011-12-10 15:06:15Z Luisehahne $
- * @filesource        $HeadURL: svn://isteam.dynxs.de/wb_svn/wb280/tags/2.8.3/wb/modules/news/save_comment.php $
+ * @filesource      $HeadURL: svn://isteam.dynxs.de/wb_svn/wb280/tags/2.8.3/wb/modules/news/save_comment.php $
  * @lastmodified    $Date: 2011-12-10 16:06:15 +0100 (Sa, 10. Dez 2011) $
  *
  */
 
-require('../../config.php');
+// Include config file
+if ( !defined( 'WB_PATH' ) ){ require( dirname(dirname((__DIR__))).'/config.php' ); }
+if ( !class_exists('admin')) { require(WB_PATH.'/framework/class.admin.php');  }
+$requestMethod = '_'.strtoupper($_SERVER['REQUEST_METHOD']);
+$aRequestVars  = (isset(${$requestMethod}) ? ${$requestMethod} : null);
 
 // Get id
-if(!isset($_POST['comment_id']) OR !is_numeric($_POST['comment_id']) OR !isset($_POST['post_id']) OR !is_numeric($_POST['post_id']))
+if(!isset($_POST['comment_id']) || !is_numeric($_POST['comment_id']) || !isset($_POST['post_id']) || !is_numeric($_POST['post_id']))
 {
     header("Location: ".ADMIN_URL."/pages/index.php");
     exit( 0 );
@@ -48,21 +52,25 @@ $id = intval($admin->getIDKEY($comment_id));
 if($admin->get_post('title') == '' AND $admin->get_post('comment') == '')
 {
     $admin->print_header();
-    $admin->print_error($MESSAGE['GENERIC']['FILL_IN_ALL'], WB_URL.'/modules/news/modify_comment.php?page_id='.$page_id.'&section_id='.$section_id.'comment_id='.$id);
+    $admin->print_error($MESSAGE['GENERIC_FILL_IN_ALL'], WB_URL.'/modules/news/modify_comment.php?page_id='.$page_id.'&section_id='.$section_id.'comment_id='.$id);
 }
 else
 {
-    $title = strip_tags($admin->get_post_escaped('title'));
-    $comment = strip_tags($admin->get_post_escaped('comment'));
+    $title = strip_tags($admin->get_post('title'));
+    $comment = strip_tags($admin->get_post('comment'));
     $post_id = $admin->getIDKEY($admin->get_post('post_id'));
 
     // do not allow droplets in user input!
-    $title = str_replace(array("[[", "]]"), array("&#91;&#91;", "&#93;&#93;"), $title);
-    $comment = str_replace(array("[[", "]]"), array("&#91;&#91;", "&#93;&#93;"), $comment);
+    $title = $admin->StripCodeFromText( $title);
+    $comment = $admin->StripCodeFromText( $comment);
 }
 
 // Update row
-$database->query("UPDATE ".TABLE_PREFIX."mod_news_comments SET title = '$title', comment = '$comment' WHERE comment_id = '$comment_id'");
+$sql  = 'UPDATE '.TABLE_PREFIX.'mod_news_comments SET '
+      . '`title`=\''.$database->escapeString($title).'\', '
+      . '`comment`=\''.$database->escapeString($comment).'\' '
+      . ' WHERE `comment_id`=\''.$database->escapeString($comment_id).'\'';
+$database->query($sql);
 
 $admin->print_header();
 // Check if there is a db error, otherwise say successful
