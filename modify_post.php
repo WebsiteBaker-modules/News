@@ -137,7 +137,7 @@ if ($fetch_content['published_until']==0) {
     $iPublishedUntil = date($jscal_format, $fetch_content['published_until']+TIMEZONE);
 }
 ?>
-   <input type="text" id="enddate" name="enddate" value="" style="width: 120px;" />
+   <input type="text" id="enddate" name="enddate" value="<?php echo $iPublishedUntil;?>" style="width: 120px;" />
    <img src="<?php echo THEME_URL ?>/images/clock_16.png" id="enddate_trigger" style="cursor: pointer;" title="<?php echo $TEXT['CALENDAR']; ?>" alt="<?php echo $TEXT['CALENDAR']; ?>" onmouseover="this.style.background='lightgrey';" onmouseout="this.style.background=''" />
    <img src="<?php echo THEME_URL ?>/images/clock_del_16.png" style="cursor: pointer;" title="<?php echo $TEXT['DELETE_DATE']; ?>" alt="<?php echo $TEXT['DELETE_DATE']; ?>" onmouseover="this.style.background='lightgrey';" onmouseout="this.style.background=''" onclick="document.modify.enddate.value=''" />
    </td>
