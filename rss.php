@@ -10,9 +10,9 @@
  * @license         http://www.gnu.org/licenses/gpl.html
  * @platform        WebsiteBaker 2.8.3
  * @requirements    PHP 5.3.6 and higher
- * @version         $Id: rss.php 1485 2011-08-01 18:22:28Z Luisehahne $
- * @filesource      $HeadURL: svn://isteam.dynxs.de/wb_svn/wb280/tags/2.8.3/wb/modules/news/rss.php $
- * @lastmodified    $Date: 2011-08-01 20:22:28 +0200 (Mo, 01. Aug 2011) $
+ * @version         $Id: rss.php 67 2017-03-03 22:14:28Z manu $
+ * @filesource      $HeadURL: svn://isteam.dynxs.de/wb2.10/tags/WB-2.10.0/wb/modules/news/rss.php $
+ * @lastmodified    $Date: 2017-03-03 23:14:28 +0100 (Fr, 03. Mrz 2017) $
  *
  */
 
@@ -91,7 +91,7 @@ $result = $database->query($sql);
 //Generating the news items
 while($item = $result->fetchRow( MYSQLI_ASSOC )){
     $description = stripslashes($item["content_short"]);
-    $description = OutputFilterApi('WbLink|SysvarMedia', $description);
+    $description = OutputFilterApi('WbLink|ReplaceSysvar', $description);
 ?>
     <item>
         <title><![CDATA[<?php echo stripslashes($item["title"]); ?>]]></title>

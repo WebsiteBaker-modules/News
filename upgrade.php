@@ -9,9 +9,9 @@
  * @license         http://www.gnu.org/licenses/gpl.html
  * @platform        WebsiteBaker 2.8.3
  * @requirements    PHP 5.3.6 and higher
- * @version         $Id: upgrade.php 1593 2012-02-01 22:29:36Z Luisehahne $
- * @filesource      $HeadURL: svn://isteam.dynxs.de/wb_svn/wb280/tags/2.8.3/wb/modules/news/upgrade.php $
- * @lastmodified    $Date: 2012-02-01 23:29:36 +0100 (Mi, 01. Feb 2012) $
+ * @version         $Id: upgrade.php 67 2017-03-03 22:14:28Z manu $
+ * @filesource      $HeadURL: svn://isteam.dynxs.de/wb2.10/tags/WB-2.10.0/wb/modules/news/upgrade.php $
+ * @lastmodified    $Date: 2017-03-03 23:14:28 +0100 (Fr, 03. Mrz 2017) $
  *
  */
 
@@ -24,13 +24,13 @@ if(!function_exists('mod_news_Upgrade'))
 {
     function mod_news_Upgrade()
     {
-        global $database, $msg, $admin, $MESSAGE;
-        $callingScript = $_SERVER["SCRIPT_NAME"];
-        $tmp = 'upgrade-script.php';
-        $globalStarted = substr_compare($callingScript, $tmp,(0-strlen($tmp)),strlen($tmp)) === 0;
-
+        global $database, $msg, $admin, $MESSAGE, $globalStarted,$callingScript;
         $sPagesPath = WB_PATH.PAGES_DIRECTORY;
         $sPostsPath = $sPagesPath.'/posts';
+        $msg = array();
+        if (is_writable(WB_PATH.'/temp/cache')) {
+            Translate::getInstance()->clearCache();
+        }
     // create /posts/ - directory if not exists
         if(!file_exists($sPostsPath)) {
             if(is_writable($sPagesPath)) {
@@ -40,36 +40,48 @@ if(!function_exists('mod_news_Upgrade'))
                     $msg[] = ($MESSAGE['PAGES_CANNOT_CREATE_ACCESS_FILE']);
                 }else {
                     $msg[] = $MESSAGE['PAGES_CANNOT_CREATE_ACCESS_FILE'].'<br />';
-                    return;
+                    return $msg;
                 }
             }
-            if($globalStarted) {echo 'directory "'.PAGES_DIRECTORY.'/posts/" created.<br />'; }
+            if (!$globalStarted) {echo 'directory "'.PAGES_DIRECTORY.'/posts/" created.<br />'; }
+        }
+        $aTable = array('mod_news_posts','mod_news_groups','mod_news_comments','mod_news_settings');
+        for($x=0; $x<sizeof($aTable);$x++) {
+            if(($sOldType = $database->getTableEngine(TABLE_PREFIX.$aTable[$x]))) {
+                if(('myisam' != strtolower($sOldType))) {
+                    if(!$database->query('ALTER TABLE `'.TABLE_PREFIX.$aTable[$x].'` Engine = \'MyISAM\' ')) {
+                        $msg[] = $database->get_error();
+                    }
+                }
+            } else {
+                $msg[] = $database->get_error();
+            }
         }
     // check if new fields must be added
         $doImportDate = true;
         if(!$database->field_exists(TABLE_PREFIX.'mod_news_posts', 'created_when')) {
             if(!$database->field_add(TABLE_PREFIX.'mod_news_posts', 'created_when',
                                     'INT NOT NULL DEFAULT \'0\' AFTER `commenting`')) {
-                if($globalStarted){
+                if (!$globalStarted){
                     echo $MESSAGE['RECORD_MODIFIED_FAILED'].'<br />';
-                    return;
+                    return $msg;
                 }else {
                     $admin->print_error($MESSAGE['RECORD_MODIFIED_FAILED']);
                 }
             }
-            if($globalStarted) { echo 'datafield `'.TABLE_PREFIX.'mod_news_posts`.`created_when` added.<br />'; }
-        }else { $doImportDate = false; }
+            if (!$globalStarted) { echo 'datafield `'.TABLE_PREFIX.'mod_news_posts`.`created_when` added.<br />'; }
+        } else { $doImportDate = false; }
         if(!$database->field_exists(TABLE_PREFIX.'mod_news_posts', 'created_by')) {
             if(!$database->field_add(TABLE_PREFIX.'mod_news_posts', 'created_by',
                                     'INT NOT NULL DEFAULT \'0\' AFTER `created_when`')) {
-                if($globalStarted){
+                if (!$globalStarted){
                     echo $MESSAGE['RECORD_MODIFIED_FAILED'].'<br />';
-                    return;
-                }else {
+                    return ;
+                } else {
                     $admin->print_error($MESSAGE['RECORD_MODIFIED_FAILED']);
                 }
             }
-            if($globalStarted) {echo 'datafield `'.TABLE_PREFIX.'mod_news_posts`.`created_by` added.<br />'; }
+            if (!$globalStarted) {echo 'datafield `'.TABLE_PREFIX.'mod_news_posts`.`created_by` added.<br />'; }
         }
     // preset new fields `created_by` and `created_when` from existing values
         if($doImportDate) {
@@ -105,7 +117,7 @@ if(!function_exists('mod_news_Upgrade'))
             }
         }
         unset($oDir);
-        if($globalStarted && $count > 0) {
+        if ($globalStarted && $count > 0) {
             $msg[] = 'save date of creation from '.$count.' old accessfiles and delete these files.<br />';
         }
 // ************************************************
@@ -148,33 +160,29 @@ if(!function_exists('mod_news_Upgrade'))
                 // Chmod the file
                     change_mode($file);
                 }else {
-                    if($globalStarted){
-                        $msg[] = $MESSAGE['PAGES_CANNOT_CREATE_ACCESS_FILE'].'<br />';
+                    if(!$globalStarted){
+                        echo $MESSAGE['PAGES_CANNOT_CREATE_ACCESS_FILE'].'<br />';
                         return;
-                    }else {
+                    } else {
                         $msg[] = ($MESSAGE['PAGES_CANNOT_CREATE_ACCESS_FILE']);
                     }
                 }
                 $count++;
             }
         }
-        if($globalStarted) { $msg[] = 'created '.$count.' new accessfiles.'; }
+        if ($globalStarted) { $msg[] = 'created '.$count.' new accessfiles.'; }
+        return $msg;
     }
 }
 
-    $msg = array();
-    $aTable = array('mod_news_posts','mod_news_groups','mod_news_comments','mod_news_settings');
-    for($x=0; $x<sizeof($aTable);$x++) {
-        if(($sOldType = $database->getTableEngine(TABLE_PREFIX.$aTable[$x]))) {
-            if(('myisam' != strtolower($sOldType))) {
-                if(!$database->query('ALTER TABLE `'.TABLE_PREFIX.$aTable[$x].'` Engine = \'MyISAM\' ')) {
-                    $msg[] = $database->get_error();
-                }
-            }
-        } else {
-            $msg[] = $database->get_error();
-        }
-    }
 // ------------------------------------
-    mod_news_Upgrade();
+    $callingScript = $_SERVER["SCRIPT_NAME"];
+    $globalStarted = preg_match('/upgrade\-script\.php$/', $callingScript);
+/*
+    $tmp = 'upgrade-script.php';
+    $globalStarted = substr_compare($callingScript, $tmp,(0-strlen($tmp)),strlen($tmp)) === 0;
+*/
+    $aMsg = mod_news_Upgrade();
+    if (!$globalStarted && sizeof($aMsg)) {print implode("\n", $aMsg)."\n";}
+
 /* **** END UPGRADE ********************************************************* */

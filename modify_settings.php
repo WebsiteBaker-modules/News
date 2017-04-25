@@ -9,9 +9,9 @@
  * @license         http://www.gnu.org/licenses/gpl.html
  * @platform        WebsiteBaker 2.8.3
  * @requirements    PHP 5.3.6 and higher
- * @version         $Id: modify_settings.php 1538 2011-12-10 15:06:15Z Luisehahne $
- * @filesource      $HeadURL: svn://isteam.dynxs.de/wb_svn/wb280/tags/2.8.3/wb/modules/news/modify_settings.php $
- * @lastmodified    $Date: 2011-12-10 16:06:15 +0100 (Sa, 10. Dez 2011) $
+ * @version         $Id: modify_settings.php 67 2017-03-03 22:14:28Z manu $
+ * @filesource      $HeadURL: svn://isteam.dynxs.de/wb2.10/tags/WB-2.10.0/wb/modules/news/modify_settings.php $
+ * @lastmodified    $Date: 2017-03-03 23:14:28 +0100 (Fr, 03. Mrz 2017) $
  *
  */
 
@@ -199,10 +199,10 @@ if(function_exists('edit_module_css')){ edit_module_css('news');}
       <tbody>
       <tr>
          <td class="left">
-            <input name="save" type="submit" value="<?php echo $TEXT['SAVE']; ?>" style="width: 100px; margin-top: 5px;" />
+            <input name="save" type="submit" value="<?php echo $TEXT['SAVE']; ?>" class="btn btn-default w3-blue-wb w3-round-small w3-hover-green w3-medium w3-padding-4" style="width: 25%; margin-top: 5px;" />
          </td>
          <td class="right">
-            <input type="button" value="<?php echo $TEXT['CANCEL']; ?>" onclick="javascript: window.location = '<?php echo ADMIN_URL; ?>/pages/modify.php?page_id=<?php echo $page_id; ?>';" style="width: 100px; margin-top: 5px;" />
+            <input type="button" value="<?php echo $TEXT['CANCEL']; ?>" onclick="window.location = '<?php echo ADMIN_URL; ?>/pages/modify.php?page_id=<?php echo $page_id; ?>';" class="btn btn-default w3-blue-wb w3-round-small w3-hover-green w3-medium w3-padding-4" style="width: 25%; margin-top: 5px;" />
          </td>
       </tr>
       </tbody>

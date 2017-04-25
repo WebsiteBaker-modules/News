@@ -9,9 +9,9 @@
  * @license         http://www.gnu.org/licenses/gpl.html
  * @platform        WebsiteBaker 2.8.3
  * @requirements    PHP 5.3.6 and higher
- * @version         $Id: view.php 1538 2011-12-10 15:06:15Z Luisehahne $
- * @filesource      $HeadURL: svn://isteam.dynxs.de/wb_svn/wb280/tags/2.8.3/wb/modules/news/view.php $
- * @lastmodified    $Date: 2011-12-10 16:06:15 +0100 (Sa, 10. Dez 2011) $
+ * @version         $Id: view.php 67 2017-03-03 22:14:28Z manu $
+ * @filesource      $HeadURL: svn://isteam.dynxs.de/wb2.10/tags/WB-2.10.0/wb/modules/news/view.php $
+ * @lastmodified    $Date: 2017-03-03 23:14:28 +0100 (Fr, 03. Mrz 2017) $
  *  if ( $setting_posts_per_page && $setting_posts_per_page + $position <= $i ) { break; }
  */
 
@@ -214,15 +214,15 @@ $setting_posts_per_page = 12/5 = 2 5 = 10
     print (str_replace($aPlaceHolders, $aReplacements, $setting_header));
     if ($total_num > 0) // $num_posts
     {
+        $sScriptUrl = $_SERVER['SCRIPT_NAME'];
         if ($query_extra != '') {
             echo ('<div class="selected-group-title">'
-                 .'<a href="'.htmlspecialchars(strip_tags($_SERVER['SCRIPT_NAME']))
+                 .'<a href="'.htmlspecialchars(strip_tags($sScriptUrl))
                  .'">'.PAGE_TITLE.'</a> &gt;&gt; '.$groups[$_GET['g']]['title']
                  .'</div>'.PHP_EOL
             );
         }
-/*
-*/
+
         $aPlaceHolders = $addBracket(
             'PAGE_TITLE',
             'GROUP_ID',
